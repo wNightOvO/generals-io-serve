@@ -5,9 +5,9 @@
 
 ## 编译环境
 
-C++20
+C++20。
 
-编译选项 `-std=gnu++20` `-Iinclude`
+编译选项： `-std=gnu++20`、`-static`。
 
 ## 生成文件
 生成在本目录下的 serve.exe 中

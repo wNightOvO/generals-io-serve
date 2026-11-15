@@ -4,7 +4,7 @@
 #pragma once
 #include "map.hpp"
 #include "player.hpp"
-#include <generals/direction.h>
+#include "direction.hpp"
 
 namespace gen::core {
 
