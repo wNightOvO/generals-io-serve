@@ -18,16 +18,16 @@ struct MoveOperation {
 };
 
 class Rule {
-public:
-    static bool isValidMove(const GameMap &map, const MoveOperation &op); // 判断移动是否合法
-
-    static void applyMove(GameMap &map, PlayerRegistry &playerRegistry, const MoveOperation &op); // 执行移动操作
-
+private:
     static void occupy(GameMap &map, PlayerRegistry &playerRegistry, Tile &destTile, int sourceID, int moveUnits); // 占领某个地块
 
     static void beatPlayer(GameMap &map, PlayerRegistry &playerRegistry, int defeatenID, int sourceID); // 击败玩家
 
-    static void applyTurnPassage(GameMap &map, PlayerRegistry &playerRegistry, int currentTurn); // 回合（时间）流逝
+    static bool isValidMove(const GameMap &map, const MoveOperation &op); // 判断移动是否合法
+public:
+    static void applyTurnPassage(GameMap &map, PlayerRegistry &playerRegistry, int &currentTurn); // 回合（时间）流逝  并会修改时间
+
+    static void applyMove(GameMap &map, PlayerRegistry &playerRegistry, const MoveOperation &op); // 执行移动操作
 };
 
 // 将方向转换为坐标偏移量 

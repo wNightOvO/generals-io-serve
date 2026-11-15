@@ -97,7 +97,8 @@ void Rule::beatPlayer(GameMap &map, PlayerRegistry &playerRegistry, int defeaten
     // 加上单位和地块
 }
 
-void Rule::applyTurnPassage(GameMap &map, PlayerRegistry &playerRegistry, int currentTurn) {
+void Rule::applyTurnPassage(GameMap &map, PlayerRegistry &playerRegistry, int &currentTurn) {
+    ++ currentTurn;
     int playerCount = playerRegistry.getPlayerCount();
     vector<int> deltaUnits(playerCount, 0);
     for(auto &tile : map.atTiles()) {
