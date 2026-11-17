@@ -69,3 +69,6 @@ Testing/
 
 # vscode configuration files
 .vscode/
+
+# obsidian configuation files
+.obsidian/
