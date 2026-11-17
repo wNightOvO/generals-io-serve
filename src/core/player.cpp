@@ -1,7 +1,7 @@
-#include "player.hpp"
+#include <core/player.hpp>
 #include <algorithm>
-#include "random.hpp"
-#include "map.hpp"
+#include <include/random.hpp>
+#include <core/map.hpp>
 #include <cassert>
 
 namespace gen::core {

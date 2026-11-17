@@ -2,7 +2,7 @@
     定义游戏的地图
 */
 #pragma once
-#include "type.hpp"
+#include <include/type.hpp>
 #include <vector>
 
 namespace gen::core {

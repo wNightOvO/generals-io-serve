@@ -4,9 +4,9 @@
 
 #pragma once
 #include <functional>
-#include "map.hpp"
-#include "player.hpp"
-#include "rule.hpp"
+#include <core/map.hpp>
+#include <core/player.hpp>
+#include <core/rule.hpp>
 
 namespace gen::core {
 

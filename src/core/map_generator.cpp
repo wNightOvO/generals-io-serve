@@ -1,4 +1,4 @@
-#include "map_generator.hpp"
+#include <core/map_generator.hpp>
 
 namespace gen::core {
 

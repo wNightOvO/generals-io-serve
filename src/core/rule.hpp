@@ -2,20 +2,12 @@
     处理游戏操作和规则
 */
 #pragma once
-#include "map.hpp"
-#include "player.hpp"
-#include "direction.hpp"
+#include <core/map.hpp>
+#include <core/player.hpp>
+#include <include/direction.hpp>
+#include <include/move_operation.hpp>
 
 namespace gen::core {
-
-struct MoveOperation {
-    int playerID = 0;
-    Point source;
-    int d = 0; // 表示方向 方向定义见 include/generals/direction.h
-    bool half; // 是否挪动一半兵力
-
-    MoveOperation(int playerID, Point source, int d, bool half): playerID(playerID), source(source), d(d), half(half) {}
-};
 
 class Rule {
 private:

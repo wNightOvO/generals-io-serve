@@ -7,7 +7,7 @@
 #include <random>
 #include <cstdint>
 
-namespace gen::core {
+namespace gen {
 
 inline uint32_t seed = 0x3f77a690; // 默认种子
 inline std::mt19937 rnd(0x3f77a690); // 随机数生成器 默认种子

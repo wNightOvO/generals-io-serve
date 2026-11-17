@@ -1,4 +1,4 @@
-#include "game.hpp"
+#include <core/game.hpp>
 
 namespace gen::core {
 

@@ -4,7 +4,7 @@
 #pragma once
 #include <cstdint>
 
-namespace gen::core {
+namespace gen {
 
 // 地形
 enum class Terrain : uint8_t {

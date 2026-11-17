@@ -1,5 +1,5 @@
-#include "rule.hpp"
-#include "player.hpp"
+#include <core/rule.hpp>
+#include <core/player.hpp>
 #include <cassert>
 
 namespace gen::core {
