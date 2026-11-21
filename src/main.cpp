@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <iostream>
 #include <core/game.hpp>
+#include <io/io.hpp>
 
 namespace gen {
 	

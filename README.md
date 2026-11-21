@@ -8,7 +8,7 @@
 
 C++20。
 
-编译选项： `g++ src/*.cpp src/core/*.cpp -std=gnu++20 -static -o serve.exe -Wall -I src `。
+编译选项： `g++ src/*.cpp src/core/*.cpp src/io/*.cpp -std=gnu++20 -static -o serve.exe -Wall -I src `。
 
 ## 生成文件
 生成在本目录下的 serve.exe 中。

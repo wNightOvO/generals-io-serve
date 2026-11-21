@@ -6,6 +6,8 @@
 // 第二维0表示行偏移量(x偏移量) 1表示列偏移量(y偏移量)
 
 #pragma once
+#include <include/type.hpp>
+#include <cassert>
 
 namespace gen {
 

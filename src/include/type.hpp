@@ -3,6 +3,7 @@
 */
 #pragma once
 #include <cstdint>
+#include <include/util.hpp>
 
 namespace gen {
 
@@ -33,6 +34,8 @@ struct Point {
     int x = 0;
     int y = 0;
 
+    Point() = default;
+
     Point(int x, int y): x(x), y(y) {}
 
     bool operator == (const Point &o) const {
@@ -49,6 +52,10 @@ struct Point {
 
     Point operator - (const Point &o) const {
         return Point(x - o.x, y - o.y);
+    }
+
+    Point nextPoint(int way) const {
+        return gen::nextPoint(*this, way);
     }
 };
 
