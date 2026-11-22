@@ -32,6 +32,9 @@ public:
 
     // 进入下一回合 执行处理 传入玩家移动序列
     void nextTurn(const std::vector<MoveOperation> &movement);
+
+    // 获取队伍视野
+    const GameMap<VisibleTerrain>& getTeamVision(int teamID);
 };
 
 
