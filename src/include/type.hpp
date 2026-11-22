@@ -3,7 +3,6 @@
 */
 #pragma once
 #include <cstdint>
-#include <include/util.hpp>
 
 namespace gen {
 
@@ -52,10 +51,6 @@ struct Point {
 
     Point operator - (const Point &o) const {
         return Point(x - o.x, y - o.y);
-    }
-
-    Point nextPoint(int way) const {
-        return gen::nextPoint(*this, way);
     }
 };
 

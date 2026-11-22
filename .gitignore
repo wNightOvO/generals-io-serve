@@ -72,3 +72,6 @@ Testing/
 
 # obsidian configuation files
 .obsidian/
+
+# logs
+logs/
