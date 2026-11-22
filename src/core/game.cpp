@@ -49,7 +49,7 @@ namespace { // namespace
     }
 } // namespace
 
-const GameMap<VisibleTerrain>& Game::getTeamVision(int teamID) {
+const GameMap<VisibleTerrain> Game::getTeamVision(int teamID) {
     const Team *team = playerRegistry.atTeam(teamID);
     vector<char> inTeam(team->players.size(), 0); // 判断玩家是否是该小队
     for(int playerID : team->players) {

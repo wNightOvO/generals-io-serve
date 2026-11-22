@@ -34,7 +34,7 @@ public:
     void nextTurn(const std::vector<MoveOperation> &movement);
 
     // 获取队伍视野
-    const GameMap<VisibleTerrain>& getTeamVision(int teamID);
+    const GameMap<VisibleTerrain> getTeamVision(int teamID);
 };
 
 
