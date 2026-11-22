@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <include/logger.hpp>
 #include <magic_enum/magic_enum.hpp>
+#include <format>
 
 namespace gen {
 
@@ -30,7 +31,7 @@ enum class VisibleTerrain : uint8_t {
     Count
 };
 
-VisibleTerrain toVisibleTerrain(Terrain terrain) {
+inline VisibleTerrain toVisibleTerrain(Terrain terrain) {
     switch(terrain) {
         case Terrain::Blank:
             return VisibleTerrain::Blank;

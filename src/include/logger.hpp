@@ -47,6 +47,6 @@ public:
     }
 };
 
-Logger logger("log.txt");
+inline Logger logger("log.txt");
 
 }
