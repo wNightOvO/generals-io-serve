@@ -2,7 +2,8 @@
     地图生成器
 */
 #pragma once
-#include <core/map.hpp>
+#include <include/type.hpp>
+#include <include/map.hpp>
 #include <vector>
 #include <cassert>
 
@@ -10,8 +11,8 @@ namespace gen::core {
 
 class Map_Generator {
 private:
-    static bool isConnected(const GameMap &map);
-    static void _generator1v1Balancedly(GameMap &map);
+    static bool isConnected(const GameMap<Terrain> &map);
+    static void _generator1v1Balancedly(GameMap<Terrain> &map);
 public:
     // 生成概率 之后可调
     static double Pcity, Pmountain, Pswamp;
@@ -34,7 +35,7 @@ public:
         return v;
     }
     
-    static void generator1v1Balancedly(GameMap &map);
+    static void generator1v1Balancedly(GameMap<Terrain> &map);
 };
 
 }

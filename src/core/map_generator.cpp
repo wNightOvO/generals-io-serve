@@ -1,5 +1,5 @@
 #include <core/map_generator.hpp>
-#include <core/map.hpp>
+#include <include/map.hpp>
 #include <vector>
 #include <include/direction.hpp>
 #include <include/random.hpp>
@@ -19,10 +19,10 @@ int Map_Generator::RcityUnit = 55;
 
 namespace {  // namespace
 
-int visitCityCapital(Point p, vector<vector<char>> &vis, const GameMap &map) {
+int visitCityCapital(Point p, vector<vector<char>> &vis, const GameMap<Terrain> &map) {
     if(vis[p.x][p.y] != 0) return 0;
     vis[p.x][p.y] = 1;
-    Tile tile = map.get(p);
+    Tile<Terrain> tile = map.get(p);
     int total = 0;
     if(tile.terrain == Terrain::City || tile.terrain == Terrain::Capital) total ++;
     for(int way = 0; way < 4; way ++) {
@@ -34,7 +34,7 @@ int visitCityCapital(Point p, vector<vector<char>> &vis, const GameMap &map) {
     return total;
 }
 
-Tile generatorTile() {
+Tile<Terrain> generatorTile() {
     double rnd = random01();
     static const vector<pair<double, Terrain>> v = Map_Generator::buildP();
     for(int i = 0; i < int(v.size()); i ++) {
@@ -51,12 +51,12 @@ Tile generatorTile() {
 
 } // namespace
 
-bool Map_Generator::isConnected(const GameMap &map) {
+bool Map_Generator::isConnected(const GameMap<Terrain> &map) {
     int totalCityCapital = 0;
     Point start(-1, -1);
     for(int x = 0; x < map.R; x ++) {
         for(int y = 0; y < map.C; y ++) {
-            Tile tile = map.get(x, y);
+            Tile<Terrain> tile = map.get(x, y);
             if(tile.terrain == Terrain::City || tile.terrain == Terrain::Capital) {
                 totalCityCapital ++;
                 if(totalCityCapital == 1) start = Point(x, y);
@@ -68,7 +68,7 @@ bool Map_Generator::isConnected(const GameMap &map) {
     return totalCityCapital == totalVisiting;
 }
 
-void Map_Generator::_generator1v1Balancedly(GameMap &map) {
+void Map_Generator::_generator1v1Balancedly(GameMap<Terrain> &map) {
     const int R = map.R, C = map.C;
     bool isOdd = bool(R % 2 == 1);
     if(isOdd) { // 奇数
@@ -90,7 +90,7 @@ void Map_Generator::_generator1v1Balancedly(GameMap &map) {
                 map.set(x, y, Tile(Terrain::Capital, capPlayerID[0], 1));
             }
             else {
-                Tile thisTile = generatorTile();
+                Tile<Terrain> thisTile = generatorTile();
                 map.set(x, y, thisTile);
             }
         }
@@ -108,7 +108,7 @@ void Map_Generator::_generator1v1Balancedly(GameMap &map) {
     }
 }
 
-void Map_Generator::generator1v1Balancedly(GameMap &map) {
+void Map_Generator::generator1v1Balancedly(GameMap<Terrain> &map) {
     do {
         _generator1v1Balancedly(map);
     }while(isConnected(map));

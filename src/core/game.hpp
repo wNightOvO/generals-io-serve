@@ -4,16 +4,17 @@
 
 #pragma once
 #include <functional>
-#include <core/map.hpp>
+#include <include/map.hpp>
 #include <core/player.hpp>
 #include <core/rule.hpp>
+#include <include/type.hpp>
 
 namespace gen::core {
 
 class Game {
 private:
     int R, C;
-    GameMap map;
+    GameMap<Terrain> map;
     int currentTurn;
     PlayerRegistry playerRegistry;
 public:
@@ -24,7 +25,7 @@ public:
     }
 
     // 注册完全部玩家后初始化游戏 传入地图生成器
-    void initializeGame(std::function<void(GameMap&)> mapGen) {
+    void initializeGame(std::function<void(GameMap<Terrain>&)> mapGen) {
         mapGen(map);
         playerRegistry.registerMoveQueue(); // 构造移动队列
     }
