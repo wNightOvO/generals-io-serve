@@ -2,4 +2,8 @@
 
 namespace gen::io {
 
+MoveOperation AIChannel::readMoveOperation() {
+    
+}
+
 }
