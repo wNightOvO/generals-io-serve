@@ -1,2 +1,2 @@
-g++ -std=gnu++20 -static -o serve.exe -Wall -Isrc -Ilib -Llib/easyx/lib src/*.cpp src/core/*.cpp src/io/*.cpp src/ui/*.cpp -leasyx -lgdi32 -lole32 -lwinmm
+g++ -std=gnu++20 -finput-charset=UTF-8 -fexec-charset=UTF-8 -static -o serve.exe -Wall -Isrc -Ilib -Llib/easyx/lib src/*.cpp src/core/*.cpp src/io/*.cpp src/ui/*.cpp -leasyx -lgdi32 -lole32 -lwinmm
 pause

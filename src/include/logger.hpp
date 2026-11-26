@@ -24,7 +24,7 @@ public:
         }
         std::filesystem::path logPath = LOG_DIRECTORY / filename;
         out.open(logPath);
-        this->info(std::format("日志 {} 创建成功。路径：{}。", filename, logPath));
+        this->info(std::format("日志 {} 创建成功。路径：{}。", filename, logPath.string()));
     }
 
     ~Logger() {
@@ -35,15 +35,15 @@ public:
     }
 
     void info(const std::string &msg) {
-        out << "INFO: " << msg << "\n";
+        out << "\tINFO:\n" << msg << "\n";
     }
 
     void warning(const std::string &msg) {
-        out << "!WARNING: " << msg << "\n";
+        out << "\t!WARNING:\n" << msg << "\n";
     }
 
     void error(const std::string &msg) {
-        out << "!!!ERROR: " << msg << "\n";
+        out << "\t!!!ERROR:\n" << msg << "\n";
     }
 };
 
