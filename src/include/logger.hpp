@@ -11,20 +11,20 @@
 
 namespace gen {
 
-namespace fs = std::filesystem;
-
 class Logger {
 private:
     std::ofstream out;
 public:
-    inline static const std::string LOG_FILE = "logs";
+    inline static const std::string LOG_DIRECTORY_STR = "logs";
+    inline static const std::filesystem::path LOG_DIRECTORY = std::filesystem::path(LOG_DIRECTORY_STR);
 
     Logger(const std::string &filename) {
-        if(!fs::exists(LOG_FILE)) {
-            fs::create_directory(LOG_FILE);
+        if(!std::filesystem::exists(LOG_DIRECTORY)) {
+            std::filesystem::create_directory(LOG_DIRECTORY);
         }
-        out.open(fs::path(LOG_FILE) / filename);
-        this->info(std::format("日志 {} 创建成功",filename));
+        std::filesystem::path logPath = LOG_DIRECTORY / filename;
+        out.open(logPath);
+        this->info(std::format("日志 {} 创建成功。路径：{}。", filename, logPath));
     }
 
     ~Logger() {

@@ -12,8 +12,9 @@ namespace gen::io {
 class Channel {
 private:
     std::string id;
-    int playerID, teamID;
 public:
+    int playerID, teamID;
+
     Channel(std::string id, int playerID, int teamID): id(id), playerID(playerID), teamID(teamID) {}
 
     virtual ~Channel() {}
@@ -21,7 +22,7 @@ public:
     virtual MoveOperation readMoveOperation() = 0;
 };
 
-class AIChannel : Channel {
+class AIChannel : public Channel {
 private:
     std::filesystem::path path;
 public:
@@ -30,7 +31,7 @@ public:
     AIChannel(std::string id, int playerID, int teamID, std::filesystem::path path): Channel(id, playerID, teamID), path(path) {}
 
     // 用 filename 构造 带后缀
-    AIChannel(std::string id, int playerID, int teamID, std::string filename): AIChannel(id, playerID, teamID, std::filesystem::path(BATTLE_FILE) / filename) {}
+    AIChannel(std::string id, int playerID, int teamID, std::string filename): AIChannel(id, playerID, teamID, BATTLE_DIRECTORY / filename) {}
 
     MoveOperation readMoveOperation() override;
 };
