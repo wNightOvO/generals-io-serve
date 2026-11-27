@@ -9,8 +9,18 @@
 #include <core/rule.hpp>
 #include <include/type.hpp>
 #include <include/logger.hpp>
+#include <iostream>
 
 namespace gen::core {
+
+struct Rank {
+    int id = 0;
+    int ranking = 0;
+
+    Rank() = default;
+
+    Rank(int id_, int ranking_): id(id_), ranking(ranking_) {}
+};
 
 class Game {
 private:
@@ -20,15 +30,6 @@ private:
     int alivePlayer;
     int aliveTeam;
     PlayerRegistry playerRegistry;
-
-    struct Rank {
-        int id;
-        int ranking;
-
-        Rank() = default;
-
-        Rank(int id_, int ranking_): id(id_), ranking(ranking_) {}
-    };
 
     std::vector<Rank> playerRank;
     std::vector<Rank> teamRank;
@@ -77,6 +78,18 @@ public:
 
     // 获取队伍视野
     const GameMap<VisibleTerrain> getTeamVision(int teamID) const;
+
+    const std::vector<Rank> getPlayerRank() const {
+        return playerRank;
+    }
+
+    const std::vector<Rank> getTeamRank() const {
+        return teamRank;
+    }
+
+    int getCurrentTurn() const {
+        return currentTurn;
+    }
 };
 
 

@@ -10,25 +10,23 @@
 namespace gen {
 
 // 地形
-enum class Terrain : uint8_t {
-    Blank,
-    Swamp,
-    Mountain,
-    Capital,
-    City,
-    Count
+enum class Terrain : char {
+    Blank = '_',
+    Swamp = 'S',
+    Mountain = 'M',
+    Capital = 'K',
+    City = 'C'
 };
 
 // 玩家可以看见的地形
-enum class VisibleTerrain : uint8_t {
-    Blank,
-    Swamp,
-    Mountain,
-    Capital,
-    City,
-    FogBlank,
-    FogMountain,
-    Count
+enum class VisibleTerrain : char {
+    Blank = '_',
+    Swamp = 'S',
+    Mountain = 'M',
+    Capital = 'K',
+    City = 'C',
+    FogBlank = '_',
+    FogMountain = 'M'
 };
 
 inline VisibleTerrain toVisibleTerrain(Terrain terrain) {
@@ -72,6 +70,10 @@ struct Point {
 
     Point operator - (const Point &o) const {
         return Point(x - o.x, y - o.y);
+    }
+
+    std::string toString() {
+        return "("+std::to_string(x)+", "+std::to_string(y)+")";
     }
 };
 

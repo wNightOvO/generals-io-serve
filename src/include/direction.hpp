@@ -17,5 +17,9 @@ const int directions[4][2] = {
     {0, 1},  // 向右
     {1, 0}  // 向下
 };
-	
+
+enum class Direction : uint8_t {
+    UP, LEFT, RIGHT, DOWN, COUNT
+};
+
 }

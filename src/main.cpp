@@ -24,6 +24,7 @@ using io::ChannelRegistry;
 using io::Channel;
 using io::AIChannel;
 using core::Game;
+using core::Rank;
 using std::unique_ptr;
 using std::make_unique;
 using std::format;
@@ -31,6 +32,7 @@ using std::vector;
 
 const string BATTLE_DIRECTORY_STR = "battle";
 const path BATTLE_DIRECTORY = path(BATTLE_DIRECTORY_STR);
+const int MAX_TURN = 1500;
 
 // 用于创建AI玩家
 Channel* createAIPlayer(const string &playerName, int playerID, int teamID) {
@@ -66,6 +68,16 @@ void startGameSolo(const string &playerName1, const string &playerName2) {
 
     // 初始化地图
     game.initializeGame(core::Map_Generator::generator1v1Balancedly);
+
+    while(game.getCurrentTurn() < MAX_TURN) {
+        vector<MoveOperation> v;
+        getMoveOperation(v, channelRegistry);
+        bool gameover = game.nextTurn(v);
+        if(gameover) break;
+    }
+
+    const vector<Rank> playerRank = game.getPlayerRank();
+    const vector<Rank> teamRank = game.getTeamRank();
 
     
 }

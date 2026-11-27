@@ -8,6 +8,8 @@ namespace gen::core {
 using std::vector;
 using std::queue;
 using std::format;
+using std::ostringstream;
+using std::string;
 
 void Game::treatTurn(const vector<MoveOperation> &movement) {
     queue<Player*> moveQueue = playerRegistry.getMoveQueue();
@@ -29,37 +31,39 @@ void Game::treatTurn(const vector<MoveOperation> &movement) {
     Rule::applyTurnPassage(map, playerRegistry, currentTurn);
 }
 
-namespace { // namespace
-
-} // namespace
-
 void Game::treatRanking() {
-    int totalDiedPlayers = 0;
+    for(int playerID = 0; playerID < playerRegistry.getPlayerCount(); playerID ++) {
+        Player *player = playerRegistry.atPlayer(playerID);
+        if(diedPlayer[playerID]) continue; // 已统计死亡
+        if(player->alive) continue; // 没死
+        alivePlayer --;
+    }
     for(int playerID = 0; playerID < playerRegistry.getPlayerCount(); playerID ++) {
         Player *player = playerRegistry.atPlayer(playerID);
         if(diedPlayer[playerID]) continue; // 已统计死亡
         if(player->alive) continue; // 没死
         diedPlayer[playerID] = 1;
-        totalDiedPlayers ++;
         playerRank.push_back(Rank(playerID, alivePlayer));
     }
-    alivePlayer -= totalDiedPlayers;
 
-    int totalDiedTeams = 0;
+    for(int teamID = 0; teamID < playerRegistry.getTeamCount(); teamID ++) {
+        Team *team = playerRegistry.atTeam(teamID);
+        if(diedTeam[teamID]) continue; // 已统计
+        if(team->alive) continue; // 未死亡
+        aliveTeam --;
+    }
     for(int teamID = 0; teamID < playerRegistry.getTeamCount(); teamID ++) {
         Team *team = playerRegistry.atTeam(teamID);
         if(diedTeam[teamID]) continue; // 已统计
         if(team->alive) continue; // 未死亡
         diedTeam[teamID] = 1;
-        totalDiedTeams ++;
         teamRank.push_back(Rank(teamID, aliveTeam));
     }
-    aliveTeam -= totalDiedTeams;
 }
 
 void Game::treatGameoverRanking() {
     if(checkGameover() == false) {
-        logger.info("Game::treatGameoverRanking: 检查游戏未结束");
+        logger.warning("Game::treatGameoverRanking: 检查游戏未结束");
         return;
     }
 
@@ -84,7 +88,14 @@ bool Game::checkGameover() const {
 }
 
 bool Game::nextTurn(const std::vector<MoveOperation> &movement) {
-
+    treatTurn(movement);
+    if(checkGameover()) {
+        treatGameoverRanking();
+        logger.info("Game::nextTurn: 游戏结束");
+        return true;
+    }
+    treatRanking();
+    return false;
 }
 
 namespace { // namespace

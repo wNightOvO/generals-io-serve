@@ -5,6 +5,8 @@
 #include <include/type.hpp>
 #include <vector>
 #include <cassert>
+#include <magic_enum/magic_enum.hpp>
+#include <iostream>
 
 namespace gen::core {
 
@@ -22,6 +24,20 @@ struct Tile {
 
     bool isNeutral() const {
         return owner == NEUTRAL;
+    }
+
+    std::string toString() const {
+        return "{terrain: " + magic_enum::enum_name(terrain) + ", owner: " + std::to_string(owner) + ", unit: " + std::to_string(unit) + "}";
+    }
+
+    // 简略写法 第一位表示占有者（小写字母，中立为_） 第二位表示类型（见type.hpp） 第三、四位表示兵力数量（暂时十进制 后续考虑更大）
+    std::string toSimpleString() const {
+        std::string s = (owner == NEUTRAL ? "_" : std::string('a'+owner));
+        s += static_cast<char>(terrain);
+        if(unit > 99) s += "99";
+        else if(unit <= 9) s += "0" + std::to_string(unit);
+        else s += std::to_string(unit); 
+        return s;
     }
 };
 
@@ -80,6 +96,18 @@ public:
     std::vector<Tile<T>>& atTiles() {
         return tiles;
     } 
+
+    // 简单形式输出便于调试
+    std::ostringstream toSimpleOstringstream() const {
+        std::ostringstream ostr;
+        for(int x = 0; x < R; x ++) {
+            for(int y = 0; y < R; y ++) {
+                ostr << get(Point(x, y)).toSimpleString() << ' ';
+            }
+            ostr << std::endl;
+        }
+        return ostr;
+    }
 };
 
 }
