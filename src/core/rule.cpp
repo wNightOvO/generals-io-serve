@@ -1,128 +1,199 @@
+/*
+    游戏规则的实现
+    负责校验移动 执行移动 处理兵力生成与消失 处理玩家淘汰
+*/
+
 #include <core/rule.hpp>
-#include <core/player.hpp>
+#include <include/util.hpp>
+#include <algorithm>
 #include <cassert>
+#include <vector>
 
 namespace gen::core {
-using std::vector;
 
-bool Rule::isValidMove(const GameMap<Terrain> &map, const MoveOperation &op) {
-    if(op.d < 0 || op.d >= 4) return false; // 检查方向是否合法
-    if(!map.isInside(op.source)) return false; // 检查源位置是否在地图内
-    Point dest = calcDestination(op.source, op.d); // 计算目标位置
-    if(!map.isInside(dest)) return false; // 检查目标位置是否在地图内
-    const Tile<Terrain>& sourceTile = map.get(op.source);
-    const Tile<Terrain>& destTile = map.get(dest);
-    if(sourceTile.owner != op.playerID) return false; // 检查源位置的所有者是否是当前玩家
-    if(sourceTile.unit <= 1) return false; // 源位置没有兵力或无法调动
-    if(destTile.terrain == Terrain::Mountain) return false; // 目标位置是山地 无法移动
+namespace { // namespace
+
+// 调试用 校验玩家与队伍的统计值是否和地图完全一致
+void checkStats(const GameMap<Terrain> &map, const PlayerRegistry &registry) {
+#ifndef NDEBUG
+    const int playerCount = registry.playerCount();
+    std::vector<int> units(playerCount, 0); // 地图上每名玩家的兵力总数
+    std::vector<int> tiles(playerCount, 0); // 地图上每名玩家的格子总数
+    for(const Tile<Terrain> &tile : map.tiles()) {
+        if(tile.owner >= 0) {
+            assert(tile.owner < playerCount); // 不能出现未知玩家
+            units[tile.owner] += tile.unit;
+            ++ tiles[tile.owner];
+        }
+        else {
+            assert(tile.owner == NEUTRAL); // 实际地图只有中立和玩家两种归属
+        }
+    }
+    for(int playerID = 0; playerID < playerCount; ++ playerID) {
+        const Player *player = registry.atPlayer(playerID);
+        if(player->alive) {
+            assert(player->units == units[playerID]);
+            assert(player->tiles == tiles[playerID]);
+        }
+        else {
+            assert(player->units == 0);
+            assert(player->tiles == 0);
+            assert(units[playerID] == 0);
+        }
+    }
+    for(int teamID = 0; teamID < registry.teamCount(); ++ teamID) {
+        const Team *team = registry.atTeam(teamID);
+        int teamUnits = 0; // 队伍兵力总数
+        int teamTiles = 0; // 队伍格子总数
+        int alivePlayers = 0; // 队伍存活玩家数
+        for(int playerID : team->players) {
+            teamUnits += units[playerID];
+            teamTiles += tiles[playerID];
+            if(registry.atPlayer(playerID)->alive) ++ alivePlayers;
+        }
+        assert(team->units == teamUnits);
+        assert(team->tiles == teamTiles);
+        assert(team->alivePlayers == alivePlayers);
+        assert(team->alive == (alivePlayers > 0));
+    }
+#else
+    (void) map;
+    (void) registry;
+#endif
+}
+
+} // namespace
+
+// 计算一次移动实际移动的兵力 一半移动时源格保留 floor(u / 2)
+int Rule::moveUnits(int sourceUnits, bool half) {
+    if(sourceUnits <= 0) return 0;
+    if(half) return sourceUnits - sourceUnits / 2;
+    return sourceUnits - 1;
+}
+
+// 判断移动是否合法
+bool Rule::isValidMove(const GameMap<Terrain> &map, int playerID, const MoveOperation &op) {
+    if(playerID < 0) return false;
+    if(map.isInside(op.source) == false) return false; // 源格在地图内
+    if(map.isInside(op.dest) == false) return false; // 目标格在地图内
+    if(manhattanDistance(op.source, op.dest) != 1) return false; // 目标格与源格相邻
+    const Tile<Terrain> &sourceTile = map.at(op.source);
+    const Tile<Terrain> &destTile = map.at(op.dest);
+    if(sourceTile.owner != playerID) return false; // 源格属于该玩家
+    if(sourceTile.unit < 2) return false; // 源格兵力大于等于 2
+    if(destTile.terrain == Terrain::Mountain) return false; // 目标格不是山区
     return true;
 }
 
-void Rule::applyMove(GameMap<Terrain> &map, PlayerRegistry &playerRegistry, const MoveOperation &op) {
-    if(!isValidMove(map, op)) return; // 无法移动
-    Point dest = calcDestination(op.source, op.d); // 计算目标位置
-    Tile<Terrain>& sourceTile = map.at(op.source);
-    Tile<Terrain>& destTile = map.at(dest);
-    int moveUnits = op.half ? (sourceTile.unit + 1) / 2 : sourceTile.unit - 1; // 计算移动的兵力 如果减半向上取整 相当于留下向下取整的兵力
-
-    if(playerRegistry.isSameTeam(sourceTile.owner, destTile.owner)) {
-        // 同一队伍
-        int originDestUnit = destTile.unit; // 没有修改前目标兵力
-        destTile.unit += moveUnits; // 增加目标位置的兵力
-        sourceTile.unit -= moveUnits; // 减少源位置的兵力
-        if(destTile.terrain != Terrain::Capital) {
-            // 不为首都则所有者变为源位置所有者
-            playerRegistry.updatePlayerState(destTile.owner, -originDestUnit, -1);
-            destTile.owner = sourceTile.owner;
-            playerRegistry.updatePlayerState(sourceTile.owner, originDestUnit, 1);
+// 执行一次移动 自动校验 非法时不做任何修改
+MoveEffect Rule::applyMove(GameMap<Terrain> &map, PlayerRegistry &registry, const MoveOperation &op, int turn) {
+    MoveEffect effect;
+    if(isValidMove(map, op.playerID, op) == false) return effect;
+    const int sourceID = op.playerID;
+    Tile<Terrain> &sourceTile = map.at(op.source);
+    Tile<Terrain> &destTile = map.at(op.dest);
+    const int move = moveUnits(sourceTile.unit, op.half);
+    effect.movedUnits = move;
+    // 先减少源格兵力并更新统计
+    sourceTile.unit -= move;
+    registry.changeStat(sourceID, -move, 0);
+    if(registry.sameTeam(sourceID, destTile.owner)) {
+        // 目标为己方或队友 兵力相加 归属不变
+        destTile.unit += move;
+        registry.changeStat(destTile.owner, move, 0);
+    }
+    else if(move <= destTile.unit) {
+        // 打不过 目标兵力减少 归属不变
+        destTile.unit -= move;
+        if(destTile.isNeutral() == false) {
+            registry.changeStat(destTile.owner, -move, 0);
         }
     }
     else {
-        // 中立或不同队伍
-        sourceTile.unit -= moveUnits;
-        playerRegistry.updatePlayerState(sourceTile.owner, -moveUnits, 0);
-        if(moveUnits <= destTile.unit) {
-            // 打不过
-            destTile.unit -= moveUnits;
-            if(!destTile.isNeutral()) {
-                playerRegistry.updatePlayerState(destTile.owner, -moveUnits, 0);
+        // 打得过 占领目标格
+        const int oldOwner = destTile.owner;
+        const bool wasCapital = destTile.terrain == Terrain::Capital;
+        const int remainUnits = move - destTile.unit;
+        if(oldOwner != NEUTRAL) {
+            // 目标原本属于其他玩家 先移除该格子的统计
+            registry.changeStat(oldOwner, -destTile.unit, -1);
+        }
+        destTile.owner = sourceID;
+        destTile.unit = remainUnits;
+        registry.changeStat(sourceID, remainUnits, 1);
+        if(wasCapital && oldOwner != NEUTRAL) {
+            // 占领了敌方首都 被占领首都变为城市 该玩家淘汰
+            effect.capturedCapital = true;
+            effect.defeatedPlayer = oldOwner;
+            destTile.terrain = Terrain::City;
+            int sumUnits = 0; // 吞并得到的兵力总数
+            int sumTiles = 0; // 吞并得到的格子总数
+            for(Tile<Terrain> &tile : map.tiles()) {
+                if(tile.owner == oldOwner) {
+                    // 非首都格兵力向上取整减半
+                    tile.unit = (tile.unit + 1) / 2;
+                    tile.owner = sourceID;
+                    sumUnits += tile.unit;
+                    ++ sumTiles;
+                }
             }
-        }
-        else {
-            // 打得过
-            occupy(map, playerRegistry, destTile, sourceTile.owner, moveUnits);
-        }
-    }
-}
-
-void Rule::occupy(GameMap<Terrain> &map, PlayerRegistry &playerRegistry, Tile<Terrain> &destTile, int sourceID, int moveUnits) {
-    assert(moveUnits > destTile.unit); // 打得过
-    // 更新目标状态
-    int originDestID = destTile.owner;
-    if(!destTile.isNeutral()) {
-        // 非中立修改状态
-        playerRegistry.updatePlayerState(destTile.owner, -destTile.unit, -1);
-    }
-    destTile.owner = sourceID;
-    destTile.unit = moveUnits - destTile.unit;
-    playerRegistry.updatePlayerState(sourceID, destTile.unit, 1); // 加上目标格子
-    if(destTile.terrain == Terrain::Capital) { // 是首都 击败该玩家
-        destTile.terrain = Terrain::City;
-        beatPlayer(map, playerRegistry, originDestID, sourceID);
-        return;
-    }
-}
-
-void Rule::beatPlayer(GameMap<Terrain> &map, PlayerRegistry &playerRegistry, int defeatenID, int sourceID) {
-    playerRegistry.markNotAlive(defeatenID); // 记录不存活并且清空单位和地块
-    int sumDeltaUnits = 0;
-    int sumDeltaTiles = 0;
-    for(auto &tile : map.atTiles()) {
-        if(tile.owner == defeatenID) {
-            tile.owner = sourceID; // 转换所有者
-            if(tile.terrain != Terrain::Capital) {
-                // 非首都保留一半上取整
-                tile.unit = (tile.unit + 1) / 2;
+            if(sumTiles > 0) {
+                registry.changeStat(sourceID, sumUnits, sumTiles);
             }
-            sumDeltaUnits += tile.unit;
-            ++ sumDeltaTiles;
-            if(tile.terrain == Terrain::Capital) {
-                // 在外面已经处理过了 理论上不执行
-                // 将敌方首都转换为自己的城市
-                tile.terrain = Terrain::City;
-            }
+            registry.killPlayer(oldOwner, turn); // 记录死亡 清空统计
         }
     }
-    playerRegistry.updatePlayerState(sourceID, sumDeltaUnits, sumDeltaTiles);
-    // 加上单位和地块
+    effect.applied = true;
+    checkStats(map, registry);
+    return effect;
 }
 
-void Rule::applyTurnPassage(GameMap<Terrain> &map, PlayerRegistry &playerRegistry, int &currentTurn) {
-    ++ currentTurn;
-    int playerCount = playerRegistry.getPlayerCount();
-    vector<int> deltaUnits(playerCount, 0);
-    for(auto &tile : map.atTiles()) {
-        if(tile.isNeutral()) continue; // 跳过中立
-        assert(tile.owner >= 0 && tile.owner < playerCount); // 在合法范围内
-        if(tile.terrain == Terrain::Blank && currentTurn % 50 == 0) {
-            // 空地加兵
-            ++ tile.unit;
-            ++ deltaUnits[tile.owner];
+// 执行回合结束后的兵力生成与消失
+void Rule::applyEconomy(GameMap<Terrain> &map, PlayerRegistry &registry, int turn) {
+    const int playerCount = registry.playerCount();
+    std::vector<int> deltaUnits(playerCount, 0); // 每名玩家的兵力变化
+    for(Tile<Terrain> &tile : map.tiles()) {
+        if(tile.owner < 0 || tile.owner >= playerCount) continue; // 中立格子不产生也不消失
+        int delta = 0;
+        switch(tile.terrain) {
+            case Terrain::Blank:
+                if(turn % 50 == 0) delta = 1; // 空地在 50 的倍数回合加 1
+                break;
+            case Terrain::City:
+            case Terrain::Capital:
+                if(turn % 2 == 0) delta = 1; // 城市与首都在偶数回合加 1
+                break;
+            case Terrain::Swamp:
+                if(tile.unit > 1) delta = -1; // 沼泽兵力大于 1 时减 1
+                break;
+            case Terrain::Mountain:
+            default:
+                break;
         }
-        else if((tile.terrain == Terrain::Capital || tile.terrain == Terrain::City) && currentTurn % 2 == 0) {
-            // 首都城市加兵
-            ++ tile.unit;
-            ++ deltaUnits[tile.owner];
-        }
-        else if(tile.terrain == Terrain::Swamp && tile.unit > 1) {
-            // 沼泽减兵
-            -- tile.unit;
-            -- deltaUnits[tile.owner];
+        tile.unit += delta;
+        deltaUnits[tile.owner] += delta;
+    }
+    for(int playerID = 0; playerID < playerCount; ++ playerID) {
+        if(deltaUnits[playerID] != 0) {
+            registry.changeStat(playerID, deltaUnits[playerID], 0);
         }
     }
-    for(int i = 0; i < playerCount; i ++) {
-        playerRegistry.updatePlayerState(i, deltaUnits[i], 0);
-    }
+    checkStats(map, registry);
 }
 
+// 让玩家判负并移出对局 全部格子变为中立且兵力清零
+void Rule::eliminatePlayer(GameMap<Terrain> &map, PlayerRegistry &registry, int playerID, int turn) {
+    if(playerID < 0 || playerID >= registry.playerCount()) return;
+    const Player *player = registry.atPlayer(playerID);
+    if(player == nullptr || player->alive == false) return; // 玩家不存在或已经死亡
+    for(Tile<Terrain> &tile : map.tiles()) {
+        if(tile.owner == playerID) {
+            tile.owner = NEUTRAL;
+            tile.unit = 0;
+        }
+    }
+    registry.killPlayer(playerID, turn); // 记录死亡 清空统计
+    checkStats(map, registry);
 }
+
+} // namespace gen::core

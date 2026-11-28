@@ -1,0 +1,38 @@
+{
+    "map": {
+        "rows": 20,
+        "cols": 20,
+        "bannedTerrains": [],
+        "seed": 0,
+        "cityProbability": 0.06,
+        "mountainProbability": 0.15,
+        "swampProbability": 0.03,
+        "cityUnitsMin": 30,
+        "cityUnitsMax": 55
+    },
+    "game": {
+        "mode": "1v1",
+        "maxTurns": 1500,
+        "gamesPerMatch": 1,
+        "ffaPlayerCount": 4,
+        "initTimeLimitMs": 2000,
+        "turnTimeLimitMs": 50,
+        "maxViolations": 5
+    },
+    "match": {
+        "autoMatch": false,
+        "teams": [["example"], ["demo_random"]],
+        "playerWeight": 1.0,
+        "teamWeight": 0.0
+    },
+    "ui": {
+        "enabled": true,
+        "cellSize": 36,
+        "turnDelayMs": 30,
+        "resultDelayMs": 1200
+    },
+    "log": {
+        "directory": "logs",
+        "recordMoves": true
+    }
+}

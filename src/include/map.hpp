@@ -1,113 +1,138 @@
 /*
-    定义游戏的地图
+    游戏地图
+    以行优先一维数组保存二维格子
 */
+
 #pragma once
 #include <include/type.hpp>
 #include <vector>
+#include <string>
 #include <cassert>
-#include <magic_enum/magic_enum.hpp>
-#include <iostream>
 
 namespace gen::core {
 
-inline constexpr int NEUTRAL = -1; // 中立单位所有者为 -1 
+// 中立格子所有者的编号
+inline constexpr int NEUTRAL = -1;
 
+// 视野外格子的未知所有者编号
+inline constexpr int UNKNOWN = -2;
+
+// 一个格子 terrain 为地形 owner 为所有者编号 unit 为兵力
 template<class T>
 struct Tile {
-    T terrain;
+    T terrain{};
     int owner = NEUTRAL;
     int unit = 0;
 
-    Tile() {}
+    Tile() = default;
 
     Tile(T terrain, int owner, int unit): terrain(terrain), owner(owner), unit(unit) {}
 
+    // 判断是否为中立格子
     bool isNeutral() const {
         return owner == NEUTRAL;
     }
 
-    std::string toString() const {
-        return "{terrain: " + magic_enum::enum_name(terrain) + ", owner: " + std::to_string(owner) + ", unit: " + std::to_string(unit) + "}";
+    // 判断格子是否由 playerID 占领
+    bool isOwnedBy(int playerID) const {
+        return owner == playerID;
     }
 
-    // 简略写法 第一位表示占有者（小写字母，中立为_） 第二位表示类型（见type.hpp） 第三、四位表示兵力数量（暂时十进制 后续考虑更大）
-    std::string toSimpleString() const {
-        std::string s = (owner == NEUTRAL ? "_" : std::string('a'+owner));
-        s += static_cast<char>(terrain);
-        if(unit > 99) s += "99";
-        else if(unit <= 9) s += "0" + std::to_string(unit);
-        else s += std::to_string(unit); 
-        return s;
+    // 返回可读的格子信息 用于日志
+    std::string toString() const {
+        return "{terrain: " + std::string(terrainToName(static_cast<Terrain>(static_cast<int>(terrain))))
+            + ", owner: " + std::to_string(owner) + ", unit: " + std::to_string(unit) + "}";
     }
 };
 
-// 地图坐标 0-index
+// 二维地图 rows 为行数 cols 为列数 行优先存储
 template<class T>
 class GameMap {
 private:
-    std::vector<Tile<T>> tiles; // 存储地图的二维数组
+    std::vector<Tile<T>> tiles_; // 行优先保存全部格子
 public:
-    int R, C;
+    int R = 0; // 行数
+    int C = 0; // 列数
 
-    GameMap(int R, int C) {
-        tiles.resize(R * C, Tile<T>());
+    GameMap() = default;
+
+    GameMap(int rows, int cols) {
+        resize(rows, cols);
     }
 
-    Tile<T>& at(int x, int y){ //返回该格的引用
+    // 修改地图大小并重置全部格子
+    void resize(int rows, int cols) {
+        R = rows;
+        C = cols;
+        tiles_.assign(static_cast<std::size_t>(rows) * static_cast<std::size_t>(cols), Tile<T>());
+    }
+
+    // 返回格子引用 调用者保证坐标在地图内
+    Tile<T>& at(int x, int y) {
         assert(isInside(x, y));
-        return tiles[x * C + y];
+        return tiles_[static_cast<std::size_t>(x) * static_cast<std::size_t>(C) + static_cast<std::size_t>(y)];
     }
 
-    Tile<T>& at(const Point &p) {
-        return at(p.x, p.y);
-    }
-
-    Tile<T> get(int x, int y) const { //返回该格的值
+    // 返回格子引用的常量版本
+    const Tile<T>& at(int x, int y) const {
         assert(isInside(x, y));
-        return tiles[x * C + y];
+        return tiles_[static_cast<std::size_t>(x) * static_cast<std::size_t>(C) + static_cast<std::size_t>(y)];
     }
 
-    Tile<T> get(const Point &p) const {
-        return get(p.x, p.y);
+    // 返回坐标对应格子的引用
+    Tile<T>& at(const Point &point) {
+        return at(point.x, point.y);
     }
 
-    void set(int x, int y, const Tile<T> &tile) { //设置该格的值
-        assert(isInside(x, y));
-        tiles[x * C + y] = tile;
+    // 返回坐标对应格子的引用 常量版本
+    const Tile<T>& at(const Point &point) const {
+        return at(point.x, point.y);
     }
 
-    void set(const Point &p, const Tile<T> &tile) {
-        set(p.x, p.y, tile);
+    // 返回格子值的拷贝
+    Tile<T> get(int x, int y) const {
+        return at(x, y);
     }
 
+    // 返回格子值的拷贝 参数为坐标
+    Tile<T> get(const Point &point) const {
+        return at(point);
+    }
+
+    // 设置格子的值
+    void set(int x, int y, const Tile<T> &tile) {
+        at(x, y) = tile;
+    }
+
+    // 设置格子的值 参数为坐标
+    void set(const Point &point, const Tile<T> &tile) {
+        at(point) = tile;
+    }
+
+    // 判断坐标是否在地图内
     bool isInside(int x, int y) const {
         return x >= 0 && x < R && y >= 0 && y < C;
     }
 
-    bool isInside(const Point &p) const {
-        return isInside(p.x, p.y);
+    // 判断坐标是否在地图内 参数为坐标
+    bool isInside(const Point &point) const {
+        return isInside(point.x, point.y);
     }
 
-    Tile<T>* operator[](int x) {
-        assert(x >= 0 && x < R);
-        return &tiles[x * C];
+    // 返回全部格子 供遍历使用
+    std::vector<Tile<T>>& tiles() {
+        return tiles_;
     }
 
-    std::vector<Tile<T>>& atTiles() {
-        return tiles;
-    } 
+    // 返回全部格子 常量版本
+    const std::vector<Tile<T>>& tiles() const {
+        return tiles_;
+    }
 
-    // 简单形式输出便于调试
-    std::ostringstream toSimpleOstringstream() const {
-        std::ostringstream ostr;
-        for(int x = 0; x < R; x ++) {
-            for(int y = 0; y < R; y ++) {
-                ostr << get(Point(x, y)).toSimpleString() << ' ';
-            }
-            ostr << std::endl;
-        }
-        return ostr;
+    // 返回格子总数
+    int tileCount() const {
+        return R * C;
     }
 };
 
-}
+} // namespace gen::core

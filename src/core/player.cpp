@@ -1,114 +1,146 @@
+/*
+    玩家 队伍 和玩家注册表的实现
+*/
+
 #include <core/player.hpp>
-#include <algorithm>
 #include <include/random.hpp>
-#include <include/map.hpp>
+#include <algorithm>
 #include <cassert>
 
 namespace gen::core {
 
-using std::vector;
-using std::unique_ptr;
-using std::queue;
-using std::make_unique;
-using std::move;
-
-void PlayerRegistry::registerPlayer(int playerID, int teamID) {
-    ++ playerCount;
-    isRegisteredMoveQueue = false; // 注册玩家就要重新注册队列
-    unique_ptr<Player> player = make_unique<Player>(playerID, teamID);
-    bool hasTeam = false;
-    for(auto &team : teams) {
-        if(team->teamID == teamID) {
-            team->players.push_back(playerID);
-            ++ team->alivePlayers;
-            players.push_back(move(player));
-            hasTeam = true;
-            break;
-        }
+// 注册一名玩家 玩家编号必须等于当前玩家数 队伍编号必须连续分配
+void PlayerRegistry::registerPlayer(int playerID, int teamID, const std::string &name) {
+    assert(playerID == playerCount()); // 玩家编号必须等于当前玩家数
+    assert(teamID >= 0 && teamID <= teamCount()); // 队伍编号从 0 开始连续分配
+    Player player;
+    player.playerID = playerID;
+    player.teamID = teamID;
+    player.name = name;
+    player.alive = true;
+    player.units = 0;
+    player.tiles = 0;
+    player.deathTurn = -1;
+    player.deathUnits = 0;
+    players_.push_back(player);
+    ++ alivePlayerCount_;
+    if(teamID == teamCount()) {
+        // 新队伍 编号等于当前队伍数
+        Team team;
+        team.teamID = teamID;
+        team.players.push_back(playerID);
+        team.alive = true;
+        team.alivePlayers = 1;
+        team.units = 0;
+        team.tiles = 0;
+        team.deathTurn = -1;
+        teams_.push_back(team);
+        ++ aliveTeamCount_;
     }
-    if(!hasTeam) {
-        ++ teamCount;
-        unique_ptr<Team> team = make_unique<Team>(teamID);
-        team->alivePlayers = 1;
-        team->players.push_back(playerID);
-        teams.push_back(move(team));
-        players.push_back(move(player));
-    }
-}
-
-void PlayerRegistry::registerMoveQueue() {
-    isRegisteredMoveQueue = true; // 标记已经注册移动队列
-    moveQueue = queue<Player*>(); // 清空队列
-    shuffle(players.begin(), players.end(), rnd); // 随机打乱玩家顺序
-    for(auto &player : players) {
-        moveQueue.push(player.get());
+    else {
+        // 已有队伍
+        Team &team = teams_[teamID];
+        team.players.push_back(playerID);
+        ++ team.alivePlayers;
     }
 }
 
-void PlayerRegistry::nextMoveQueue() {
-    assert(isRegisteredMoveQueue); // 确定已经注册移动队列
-    if(moveQueue.empty()) return;
-    Player* player = moveQueue.front();
-    moveQueue.pop();
-    moveQueue.push(player);
-}
-
-bool PlayerRegistry::isSameTeam(int playerID1, int playerID2) const {
-    if(playerID1 == NEUTRAL || playerID2 == NEUTRAL) return false; // 中立玩家不属于任何队伍
-    int teamID1 = -1;
-    int teamID2 = -1;
-    for(auto &player : players) {
-        if(player->playerID == playerID1) {
-            teamID1 = player->teamID;
-        }
-        if(player->playerID == playerID2) {
-            teamID2 = player->teamID;
-        }
+// 注册完全部玩家后调用 构造随机的初始移动优先级
+void PlayerRegistry::finalize() {
+    moveOrder_.clear();
+    for(int playerID = 0; playerID < playerCount(); ++ playerID) {
+        moveOrder_.push_back(playerID);
     }
-    assert(teamID1 != -1 && teamID2 != -1); // 玩家不存在
-    return teamID1 == teamID2;
-}
-
-Player* PlayerRegistry::atPlayer(int playerID) const {
-    for(auto &player : players) {
-        if(player->playerID == playerID) {
-            return player.get();
-        }
+    if(moveOrder_.size() > 1) {
+        randomShuffle(moveOrder_.begin(), moveOrder_.end());
     }
-    assert(false);
-    return players[0].get();
 }
 
-Team* PlayerRegistry::atTeam(int teamID) const {
-    for(auto &team : teams) {
-        if(team->teamID == teamID) {
-            return team.get();
-        }
+Player* PlayerRegistry::atPlayer(int playerID) {
+    assert(playerID >= 0 && playerID < playerCount()); // 越界是程序错误
+    if(playerID < 0 || playerID >= playerCount()) return nullptr;
+    return &players_[playerID];
+}
+
+const Player* PlayerRegistry::atPlayer(int playerID) const {
+    assert(playerID >= 0 && playerID < playerCount()); // 越界是程序错误
+    if(playerID < 0 || playerID >= playerCount()) return nullptr;
+    return &players_[playerID];
+}
+
+Team* PlayerRegistry::atTeam(int teamID) {
+    assert(teamID >= 0 && teamID < teamCount()); // 越界是程序错误
+    if(teamID < 0 || teamID >= teamCount()) return nullptr;
+    return &teams_[teamID];
+}
+
+const Team* PlayerRegistry::atTeam(int teamID) const {
+    assert(teamID >= 0 && teamID < teamCount()); // 越界是程序错误
+    if(teamID < 0 || teamID >= teamCount()) return nullptr;
+    return &teams_[teamID];
+}
+
+// 把移动优先级轮转一位 当前最高优先级玩家变为最低
+void PlayerRegistry::rotateMoveOrder() {
+    if(moveOrder_.size() > 1) {
+        std::rotate(moveOrder_.begin(), moveOrder_.begin() + 1, moveOrder_.end());
     }
-    assert(false);
-    return teams[0].get();
 }
 
-void PlayerRegistry::updatePlayerState(int playerID, int deltaUnits, int deltaTiles) {
-    Player* player = atPlayer(playerID);
-    Team* team = atTeam(player->teamID);
-    assert(player->alive && team->alive); // 存活的才能修改
-    player->units += deltaUnits;
-    player->tiles += deltaTiles;
-    team->units += deltaUnits;
-    team->tiles += deltaTiles;
+// 判断两名玩家是否属于同一队伍 中立与未知不属于任何队伍
+bool PlayerRegistry::sameTeam(int playerID1, int playerID2) const {
+    if(playerID1 < 0 || playerID2 < 0) return false;
+    if(playerID1 >= playerCount() || playerID2 >= playerCount()) return false;
+    return players_[playerID1].teamID == players_[playerID2].teamID;
 }
 
-void PlayerRegistry::markNotAlive(int playerID) {
-    Player* player = atPlayer(playerID);
-    Team* team = atTeam(player->teamID);
-    player->alive = false;
-    team->units -= player->units;
-    team->tiles -= player->tiles;
-    player->units = 0;
-    player->tiles = 0;
-    -- team->alivePlayers;
-    if(team->alivePlayers == 0) team->alive = false;
+// 修改玩家和队伍的统计值
+void PlayerRegistry::changeStat(int playerID, int deltaUnits, int deltaTiles) {
+    if(playerID < 0 || playerID >= playerCount()) return;
+    Player &player = players_[playerID];
+    if(player.alive == false) return; // 已淘汰玩家不再累计统计
+    player.units += deltaUnits;
+    player.tiles += deltaTiles;
+    if(player.teamID >= 0 && player.teamID < teamCount()) {
+        Team &team = teams_[player.teamID];
+        team.units += deltaUnits;
+        team.tiles += deltaTiles;
+    }
 }
 
+// 清空全部玩家的统计值 用于初始化后重新统计
+void PlayerRegistry::clearStats() {
+    for(Player &player : players_) {
+        player.units = 0;
+        player.tiles = 0;
+    }
+    for(Team &team : teams_) {
+        team.units = 0;
+        team.tiles = 0;
+    }
 }
+
+// 标记玩家死亡 记录死亡回合和死亡时兵力 清空统计并更新队伍状态
+void PlayerRegistry::killPlayer(int playerID, int turn) {
+    if(playerID < 0 || playerID >= playerCount()) return;
+    Player &player = players_[playerID];
+    if(player.alive == false) return; // 已经死亡
+    player.alive = false;
+    player.deathTurn = turn;
+    player.deathUnits = player.units; // 记录死亡时兵力
+    Team &team = teams_[player.teamID];
+    team.units -= player.units;
+    team.tiles -= player.tiles;
+    player.units = 0;
+    player.tiles = 0;
+    if(alivePlayerCount_ > 0) -- alivePlayerCount_;
+    if(team.alivePlayers > 0) -- team.alivePlayers;
+    if(team.alivePlayers == 0) {
+        // 队伍无人存活 记录队伍死亡回合
+        team.alive = false;
+        team.deathTurn = turn;
+        if(aliveTeamCount_ > 0) -- aliveTeamCount_;
+    }
+}
+
+} // namespace gen::core
